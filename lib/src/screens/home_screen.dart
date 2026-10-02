@@ -1,95 +1,123 @@
 import 'package:flutter/material.dart';
 
 import '../components/components.dart';
+import '../data/data.dart';
 import '../models/models.dart';
 import '../styles/app_colors.dart';
+import 'detalhe_consulta_screen.dart';
 
 class HomeScreen extends StatefulWidget {
- const HomeScreen({super.key});
+  const HomeScreen({super.key});
 
- @override
- State<HomeScreen> createState() => _HomeScreenState();
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
- static const _especialidade = Especialidade(
- id: 1,
- nome: 'Cardiologia',
- descricao: 'Cuidados com o coração',
- );
+  List<Consulta> _consultas = [];
+  bool _carregando = true;
 
- static const _medico = Medico(
- id: 1,
- nome: 'Dr. Roberto Silva',
- crm: 'CRM12345',
- especialidade: _especialidade,
- ativo: true,
- );
+  @override
+  void initState() {
+    super.initState();
+    _carregarConsultas();
+  }
 
- static const _paciente = Paciente(
- id: 1,
- nome: 'Carlos Andrade',
- cpf: '123.456.789-00',
- email: 'carlos@email.com',
- telefone: '(11) 98765-4321',
- );
+  Future<void> _carregarConsultas() async {
+    final consultas = await ConsultaStorage.carregar();
+    if (!mounted) return;
 
- Consulta _consulta = Consulta(
- id: 1,
- medico: _medico,
- paciente: _paciente,
- data: DateTime(2026, 8, 21, 14, 30),
- valor: 350,
- status: StatusConsulta.agendada,
- observacoes: 'Consulta de rotina',
- );
+    setState(() {
+      _consultas = consultas;
+      _carregando = false;
+    });
+  }
 
- void _confirmarConsulta() {
- setState(() {
- _consulta = _consulta.copyWith(status: StatusConsulta.confirmada);
- });
- }
+  Future<void> _confirmarConsulta(int id) async {
+    await _atualizarStatus(id, StatusConsulta.confirmada);
+  }
 
- void _cancelarConsulta() {
- setState(() {
- _consulta = _consulta.copyWith(status: StatusConsulta.cancelada);
- });
- }
+  Future<void> _cancelarConsulta(int id) async {
+    await _atualizarStatus(id, StatusConsulta.cancelada);
+  }
 
- @override
- Widget build(BuildContext context) {
- return Scaffold(
- backgroundColor: AppColors.primaria,
- body: SafeArea(
- child: SingleChildScrollView(
- padding: const EdgeInsets.all(24),
- child: Column(
- children: [
- const Text(
- 'Sistema de Consultas',
- textAlign: TextAlign.center,
- style: TextStyle(
- color: AppColors.branco,
- fontSize: 28,
- fontWeight: FontWeight.bold,
- ),
- ),
- const SizedBox(height: 8),
- const Text(
- 'Acompanhe o status da sua consulta',
- textAlign: TextAlign.center,
- style: TextStyle(color: AppColors.branco, fontSize: 16),
- ),
- const SizedBox(height: 24),
- ConsultaCard(
- consulta: _consulta,
- onConfirmar: _confirmarConsulta,
- onCancelar: _cancelarConsulta,
- ),
- ],
- ),
- ),
- ),
- );
- }
+  Future<void> _atualizarStatus(int id, StatusConsulta status) async {
+    final consultasAtualizadas = _consultas
+        .map(
+          (consulta) =>
+              consulta.id == id ? consulta.copyWith(status: status) : consulta,
+        )
+        .toList();
+
+    setState(() {
+      _consultas = consultasAtualizadas;
+    });
+    await ConsultaStorage.salvar(consultasAtualizadas);
+  }
+
+  void _abrirDetalhes(int id) {
+    final consulta = _consultas.firstWhere((item) => item.id == id);
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => DetalheConsultaScreen(consulta: consulta),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.primaria,
+      body: SafeArea(
+        child: Column(
+          children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(24, 24, 24, 0),
+              child: Column(
+                children: [
+                  Text(
+                    'Sistema de Consultas',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: AppColors.branco,
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    'Acompanhe o status da sua consulta',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: AppColors.branco, fontSize: 16),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            Expanded(
+              child: _carregando
+                  ? const Center(
+                      child: CircularProgressIndicator(color: AppColors.branco),
+                    )
+                  : ListView.separated(
+                      padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                      itemCount: _consultas.length,
+                      separatorBuilder: (_, _) => const SizedBox(height: 16),
+                      itemBuilder: (context, index) {
+                        final consulta = _consultas[index];
+                        return ConsultaCard(
+                          key: ValueKey(consulta.id),
+                          consulta: consulta,
+                          onConfirmar: _confirmarConsulta,
+                          onCancelar: _cancelarConsulta,
+                          onVerDetalhes: _abrirDetalhes,
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

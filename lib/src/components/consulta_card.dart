@@ -4,197 +4,237 @@ import '../models/models.dart';
 import '../styles/styles.dart';
 
 class ConsultaCard extends StatelessWidget {
- const ConsultaCard({
- super.key,
- required this.consulta,
- required this.onConfirmar,
- required this.onCancelar,
- });
+  const ConsultaCard({
+    super.key,
+    required this.consulta,
+    this.onConfirmar,
+    this.onCancelar,
+    this.onVerDetalhes,
+  });
 
- final Consulta consulta;
- final VoidCallback onConfirmar;
- final VoidCallback onCancelar;
+  final Consulta consulta;
+  final void Function(int id)? onConfirmar;
+  final void Function(int id)? onCancelar;
+  final void Function(int id)? onVerDetalhes;
 
- @override
- Widget build(BuildContext context) {
- return Container(
- width: double.infinity,
- padding: ConsultaCardStyles.paddingCard,
- decoration: ConsultaCardStyles.card,
- child: Column(
- crossAxisAlignment: CrossAxisAlignment.start,
- children: [
- _BadgeStatus(status: consulta.status),
- const SizedBox(height: 20),
- _Secao(
- titulo: 'Paciente',
- children: [
- Text(consulta.paciente.nome, style: ConsultaCardStyles.valor),
- const SizedBox(height: 4),
- Text(consulta.paciente.cpf, style: ConsultaCardStyles.info),
- Text(consulta.paciente.email, style: ConsultaCardStyles.info),
- ],
- ),
- _Secao(
- titulo: 'Médico',
- children: [
- Text(consulta.medico.nome, style: ConsultaCardStyles.valor),
- const SizedBox(height: 4),
- Text(consulta.medico.crm, style: ConsultaCardStyles.info),
- Text(
- consulta.medico.especialidade.nome,
- style: ConsultaCardStyles.info,
- ),
- ],
- ),
- _Secao(
- titulo: 'Consulta',
- ultima: consulta.status != StatusConsulta.agendada,
- children: [
- Text(
- formatarData(consulta.data),
- style: ConsultaCardStyles.valor,
- ),
- const SizedBox(height: 4),
- Text(
- formatarValor(consulta.valor),
- style: ConsultaCardStyles.info,
- ),
- if (consulta.observacoes != null &&
- consulta.observacoes!.isNotEmpty) ...[
- const SizedBox(height: 8),
- Text(
- consulta.observacoes!,
- style: ConsultaCardStyles.observacoes,
- ),
- ],
- ],
- ),
- if (consulta.status == StatusConsulta.agendada)
- _BotoesAcao(onConfirmar: onConfirmar, onCancelar: onCancelar)
- else
- _MensagemStatus(status: consulta.status),
- ],
- ),
- );
- }
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: ConsultaCardStyles.paddingCard,
+      decoration: ConsultaCardStyles.card,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _BadgeStatus(status: consulta.status),
+          const SizedBox(height: 20),
+          _Secao(
+            titulo: 'Paciente',
+            children: [
+              Text(consulta.paciente.nome, style: ConsultaCardStyles.valor),
+              const SizedBox(height: 4),
+              Text(consulta.paciente.cpf, style: ConsultaCardStyles.info),
+              Text(consulta.paciente.email, style: ConsultaCardStyles.info),
+            ],
+          ),
+          _Secao(
+            titulo: 'Médico',
+            children: [
+              Text(consulta.medico.nome, style: ConsultaCardStyles.valor),
+              const SizedBox(height: 4),
+              Text(consulta.medico.crm, style: ConsultaCardStyles.info),
+              Text(
+                consulta.medico.especialidade.nome,
+                style: ConsultaCardStyles.info,
+              ),
+            ],
+          ),
+          _Secao(
+            titulo: 'Consulta',
+            ultima:
+                consulta.status != StatusConsulta.agendada ||
+                onConfirmar == null ||
+                onCancelar == null,
+            children: [
+              Text(
+                formatarData(consulta.data),
+                style: ConsultaCardStyles.valor,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                formatarValor(consulta.valor),
+                style: ConsultaCardStyles.info,
+              ),
+              if (consulta.observacoes != null &&
+                  consulta.observacoes!.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text(
+                  consulta.observacoes!,
+                  style: ConsultaCardStyles.observacoes,
+                ),
+              ],
+            ],
+          ),
+          if (consulta.status == StatusConsulta.agendada &&
+              onConfirmar != null &&
+              onCancelar != null)
+            _BotoesAcao(
+              onConfirmar: () => onConfirmar!(consulta.id),
+              onCancelar: () => onCancelar!(consulta.id),
+            )
+          else if (consulta.status != StatusConsulta.agendada)
+            _MensagemStatus(status: consulta.status),
+          if (onVerDetalhes != null) ...[
+            const SizedBox(height: 12),
+            _BotaoVerDetalhes(onPressed: () => onVerDetalhes!(consulta.id)),
+          ],
+        ],
+      ),
+    );
+  }
 }
 
 class _BadgeStatus extends StatelessWidget {
- const _BadgeStatus({required this.status});
+  const _BadgeStatus({required this.status});
 
- final StatusConsulta status;
+  final StatusConsulta status;
 
- @override
- Widget build(BuildContext context) {
- return Container(
- padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
- decoration: ConsultaCardStyles.badge(status),
- child: Text(status.rotulo, style: ConsultaCardStyles.statusTexto),
- );
- }
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: ConsultaCardStyles.badge(status),
+      child: Text(status.rotulo, style: ConsultaCardStyles.statusTexto),
+    );
+  }
 }
 
 class _Secao extends StatelessWidget {
- const _Secao({
- required this.titulo,
- required this.children,
- this.ultima = false,
- });
+  const _Secao({
+    required this.titulo,
+    required this.children,
+    this.ultima = false,
+  });
 
- final String titulo;
- final List<Widget> children;
- final bool ultima;
+  final String titulo;
+  final List<Widget> children;
+  final bool ultima;
 
- @override
- Widget build(BuildContext context) {
- return Container(
- width: double.infinity,
- margin: const EdgeInsets.only(bottom: 20),
- padding: const EdgeInsets.only(bottom: 20),
- decoration: ultima ? null : ConsultaCardStyles.secao,
- child: Column(
- crossAxisAlignment: CrossAxisAlignment.start,
- children: [
- Text(titulo, style: ConsultaCardStyles.label),
- const SizedBox(height: 8),
- ...children,
- ],
- ),
- );
- }
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 20),
+      padding: const EdgeInsets.only(bottom: 20),
+      decoration: ultima ? null : ConsultaCardStyles.secao,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(titulo, style: ConsultaCardStyles.label),
+          const SizedBox(height: 8),
+          ...children,
+        ],
+      ),
+    );
+  }
 }
 
 class _BotoesAcao extends StatelessWidget {
- const _BotoesAcao({required this.onConfirmar, required this.onCancelar});
+  const _BotoesAcao({required this.onConfirmar, required this.onCancelar});
 
- final VoidCallback onConfirmar;
- final VoidCallback onCancelar;
+  final VoidCallback onConfirmar;
+  final VoidCallback onCancelar;
 
- @override
- Widget build(BuildContext context) {
- return Column(
- crossAxisAlignment: CrossAxisAlignment.stretch,
- children: [
- ElevatedButton(
- onPressed: onConfirmar,
- style: ElevatedButton.styleFrom(
- backgroundColor: AppColors.sucesso,
- foregroundColor: AppColors.branco,
- padding: const EdgeInsets.symmetric(vertical: 14),
- shape: RoundedRectangleBorder(
- borderRadius: BorderRadius.circular(8),
- ),
- ),
- child: const Text('Confirmar', style: ConsultaCardStyles.botaoTexto),
- ),
- const SizedBox(height: 12),
- ElevatedButton(
- onPressed: onCancelar,
- style: ElevatedButton.styleFrom(
- backgroundColor: AppColors.perigo,
- foregroundColor: AppColors.branco,
- padding: const EdgeInsets.symmetric(vertical: 14),
- shape: RoundedRectangleBorder(
- borderRadius: BorderRadius.circular(8),
- ),
- ),
- child: const Text('Cancelar', style: ConsultaCardStyles.botaoTexto),
- ),
- ],
- );
- }
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        ElevatedButton(
+          onPressed: onConfirmar,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.sucesso,
+            foregroundColor: AppColors.branco,
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+          child: const Text('Confirmar', style: ConsultaCardStyles.botaoTexto),
+        ),
+        const SizedBox(height: 12),
+        ElevatedButton(
+          onPressed: onCancelar,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.perigo,
+            foregroundColor: AppColors.branco,
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+          child: const Text('Cancelar', style: ConsultaCardStyles.botaoTexto),
+        ),
+      ],
+    );
+  }
 }
 
 class _MensagemStatus extends StatelessWidget {
- const _MensagemStatus({required this.status});
+  const _MensagemStatus({required this.status});
 
- final StatusConsulta status;
+  final StatusConsulta status;
 
- @override
- Widget build(BuildContext context) {
- final confirmada = status == StatusConsulta.confirmada;
- return Container(
- width: double.infinity,
- padding: const EdgeInsets.all(16),
- decoration: ConsultaCardStyles.mensagem(status),
- child: Text(
- confirmada ? 'Consulta confirmada com sucesso!' : 'Consulta cancelada',
- textAlign: TextAlign.center,
- style: ConsultaCardStyles.mensagemTexto,
- ),
- );
- }
+  @override
+  Widget build(BuildContext context) {
+    final confirmada = status == StatusConsulta.confirmada;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: ConsultaCardStyles.mensagem(status),
+      child: Text(
+        confirmada ? 'Consulta confirmada com sucesso!' : 'Consulta cancelada',
+        textAlign: TextAlign.center,
+        style: ConsultaCardStyles.mensagemTexto,
+      ),
+    );
+  }
+}
+
+class _BotaoVerDetalhes extends StatelessWidget {
+  const _BotaoVerDetalhes({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton(
+        onPressed: onPressed,
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.primaria,
+          side: const BorderSide(color: AppColors.primaria),
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+        child: const Text(
+          'Ver Detalhes',
+          style: ConsultaCardStyles.botaoDetalhesTexto,
+        ),
+      ),
+    );
+  }
 }
 
 String formatarData(DateTime data) {
- final dia = data.day.toString().padLeft(2, '0');
- final mes = data.month.toString().padLeft(2, '0');
- final hora = data.hour.toString().padLeft(2, '0');
- final minuto = data.minute.toString().padLeft(2, '0');
- return '$dia/$mes/${data.year} às $hora:$minuto';
+  final dia = data.day.toString().padLeft(2, '0');
+  final mes = data.month.toString().padLeft(2, '0');
+  final hora = data.hour.toString().padLeft(2, '0');
+  final minuto = data.minute.toString().padLeft(2, '0');
+  return '$dia/$mes/${data.year} às $hora:$minuto';
 }
 
 String formatarValor(double valor) {
- return 'R\$ ${valor.toStringAsFixed(2).replaceAll('.', ',')}';
+  return 'R\$ ${valor.toStringAsFixed(2).replaceAll('.', ',')}';
 }
